@@ -1,3 +1,7 @@
 # Repositorios versionados separadamente
 coordgeo-backend/
 coordgeo-frontend/
+
+# Assets locais de apoio e metadados do Windows
+static/
+*.Zone.Identifier

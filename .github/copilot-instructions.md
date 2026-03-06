@@ -189,26 +189,36 @@ All endpoints support list, create, retrieve, update, destroy actions.
 
 ### WSL + Virtualenv (critical for AI agents)
 
-- Always run Python commands in WSL from the project root using the local virtualenv at `./venv`.
-- Prefer invoking the interpreter directly instead of relying on `python` from PATH.
-- **Canonical test command** (execute from PowerShell/Windows):
-    ```bash
-    wsl bash -lc "cd /home/moises/dev/django/geodjango; ./venv/bin/python manage.py test -v 2"
-    ```
-- Alternative test command (from WSL shell):
-    ```bash
-    ./venv/bin/python run_tests.py
-    ```
-- Development server:
-    ```bash
-    ./venv/bin/python manage.py runserver
-    ```
+- Your development flow is WSL-first. Prefer running commands directly inside a WSL terminal.
+- Avoid native PowerShell commands for backend/frontend runtime tasks whenever possible.
+- Always run Python commands from `coordgeo-backend/` using the local virtualenv at `./venv`.
+- Prefer invoking the interpreter directly (`./venv/bin/python`) instead of relying on `python` from PATH.
+- **Canonical backend test command (inside WSL terminal):**
+  ```bash
+  cd /home/moises/dev/coordgeo/coordgeo-backend
+  ./venv/bin/python manage.py test -v 2
+  ```
+- **Alternative test command (inside WSL terminal):**
+  ```bash
+  cd /home/moises/dev/coordgeo/coordgeo-backend
+  ./venv/bin/python run_tests.py
+  ```
+- **Development server (inside WSL terminal):**
+  ```bash
+  cd /home/moises/dev/coordgeo/coordgeo-backend
+  ./venv/bin/python manage.py runserver
+  ```
 - If activation is needed in a terminal session:
-    ```bash
-    source venv/bin/activate
-    ```
-    and then run `python ...` commands in the same session.
-- Do not attempt multiple Python launch strategies before trying the canonical WSL command above; treat it as the default.
+  ```bash
+  cd /home/moises/dev/coordgeo/coordgeo-backend
+  source venv/bin/activate
+  ```
+  then run `python ...` in the same WSL session.
+- If a command must be launched from PowerShell, use this wrapper pattern:
+  ```bash
+  wsl --cd /home/moises/dev/coordgeo/coordgeo-backend bash -lc "./venv/bin/python manage.py test -v 2"
+  ```
+- Do not use `wsl -ic` directly (unsupported). Use `wsl bash -ic ...` or `wsl --cd ... bash -lc ...`.
 
 **Production server** (Gunicorn required for PMTiles HTTP Range header support):
 ```bash
@@ -306,7 +316,10 @@ When implementing creation endpoints, consider adding quota validation hooks for
   - `npm run dev` - Inicia Vite dev server (porta 5173)
   - `npm run build` - Build de produção
   - `npm run lint` - ESLint check
+- Fluxo recomendado: rodar frontend no terminal WSL já com `nvm` carregado.
 - Se usar `nvm`, prefira shell interativo (`bash -ic`) para carregar a versão correta do Node.
+- Se precisar executar pelo PowerShell, prefira:
+  `wsl --cd /home/moises/dev/coordgeo/coordgeo-frontend bash -lc 'source "$HOME/.nvm/nvm.sh" && nvm use 20.19.4 && npm run dev'`.
 - Se ocorrer erro do `@tailwindcss/oxide`:
   ```bash
   rm -rf node_modules package-lock.json && npm install

@@ -6,7 +6,9 @@
 	],
 	"settings": {
 		"chat.tools.terminal.autoApprove": {
-			"wsl": true
+			"wsl": true,
+			"Add-Type": true,
+			"New-Object": true
 		}
 	}
 }

@@ -4,6 +4,8 @@
 
 Inicia backend (Gunicorn) + frontend (Vite) em ambiente de desenvolvimento com hot reload.
 
+> Recomendação principal: execute os comandos em um terminal WSL (não PowerShell).
+
 ### No WSL (Bash)
 
 ```bash
@@ -14,9 +16,8 @@ cd /home/moises/dev/coordgeo
 ### No PowerShell (Windows)
 
 ```powershell
-# WSL automático
-cd u:\home\moises\dev\coordgeo
-wsl bash -ic './scripts/start_dev.sh'
+# Fallback (quando precisar iniciar via PowerShell)
+wsl --cd /home/moises/dev/coordgeo bash -lc './scripts/start_dev.sh'
 
 # Ou via PowerShell:
 .\scripts\start_dev.ps1
@@ -61,7 +62,7 @@ cd /home/moises/dev/coordgeo
 ### No PowerShell
 
 ```powershell
-wsl bash -ic 'cd /home/moises/dev/coordgeo; ./scripts/verify_local.sh'
+wsl --cd /home/moises/dev/coordgeo bash -lc './scripts/verify_local.sh'
 ```
 
 ### O que valida
@@ -158,7 +159,7 @@ nvm use 20.19.4
 npm run dev
 
 # Via WSL no PowerShell
-wsl bash -ic 'nvm use 20.19.4 && npm run dev'
+wsl --cd /home/moises/dev/coordgeo/coordgeo-frontend bash -lc 'source "$HOME/.nvm/nvm.sh" && nvm use 20.19.4 && npm run dev'
 ```
 
 ### Backend Crasha com Erro de Banco
