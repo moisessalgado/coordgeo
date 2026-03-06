@@ -15,6 +15,28 @@ coordgeo/
 
 ---
 
+## ⚠️ REPOSITORY SEPARATION (CRITICAL)
+
+**Backend development:**
+- ALL backend code → **[coordgeo-backend](https://github.com/moisessalgado/coordgeo-backend)** repository
+- Models, views, serializers, tests, migrations, settings, docs
+- Push backend commits to `github.com/moisessalgado/coordgeo-backend`
+
+**Frontend development:**
+- ALL frontend code → **[coordgeo-frontend](https://github.com/moisessalgado/coordgeo-frontend)** repository
+- React components, services, state management, styling, tests, configs
+- Push frontend commits to `github.com/moisessalgado/coordgeo-frontend`
+
+**Root repository (coordgeo):**
+- Deployment & integration scripts only (e.g., `scripts/verify_local.sh`)
+- Consolidated Copilot instructions (this file)
+- Workspace configuration (`.github/`, `coordgeo.code-workspace`)
+- Push integration commits to `github.com/moisessalgado/coordgeo` (orchestration repository)
+
+**Golden Rule:** When developing, use local folders (`coordgeo-backend/`, `coordgeo-frontend/`) but always commit to their respective remote repositories. Root repo stays separate for infrastructure automation.
+
+---
+
 # 🔧 Backend Instructions (Django)
 
 ## 1) Escopo
@@ -408,20 +430,59 @@ chore: atualiza dependências do frontend
 
 ## 🔄 Full-Stack Conventions
 
-**When making changes that span both repos:**
-1. Start with backend API changes (models, serializers, views)
-2. Run backend tests: `python manage.py test -v 2`
-3. Update frontend API client (`src/services/geodata.ts`)
-4. Update frontend types (`src/types/geospatial.ts`)
-5. Test frontend build: `npm run build && npm run lint`
-6. Commit separately: backend first, then frontend
+### Repository-Specific Commits
 
-**File organization:**
-- Keep frontend code in `coordgeo-frontend/`
-- Keep backend code in `coordgeo-backend/`
-- Never mix concerns in commits
+**CRITICAL:** Every commit must belong to EXACTLY ONE repository.
 
-**Communication between repos:**
-- Backend exposes REST API at `/api/v1/`
-- Frontend consumes via Axios with JWT + org headers
-- Changes to API contract require coordination
+**Backend commits → push to `coordgeo-backend`:**
+- Changes to `coordgeo-backend/accounts/`, `coordgeo-backend/organizations/`, `coordgeo-backend/projects/`, `coordgeo-backend/data/`, `coordgeo-backend/permissions/`
+- Database migrations, models, serializers, views
+- API endpoint changes
+- Backend tests in `coordgeo-backend/tests_pytest/` or app-specific test folders
+- Django configuration, settings, requirements.txt
+- Backend documentation in `coordgeo-backend/docs/`
+
+**Frontend commits → push to `coordgeo-frontend`:**
+- Changes to `coordgeo-frontend/src/components/`, `coordgeo-frontend/src/pages/`, `coordgeo-frontend/src/services/`, `coordgeo-frontend/src/state/`, `coordgeo-frontend/src/types/`
+- React components, hooks, TypeScript types
+- Styling, CSS, Tailwind configuration
+- Frontend build config (vite.config.ts, tsconfig.json, eslint.config.js)
+- Frontend package.json, package-lock.json
+- Frontend tests (when created)
+- Frontend documentation in `coordgeo-frontend/docs/`
+
+**Root repository commits → push to `coordgeo` (orchestration repo):**
+- Changes to `scripts/` (deployment, verification, build automation)
+- `.github/copilot-instructions.md` (this file)
+- `coordgeo.code-workspace` (workspace configuration)
+- `.gitignore` (root ignore rules)
+- Root-level documentation explaining the orchestration structure
+- **NEVER include backend or frontend source code**
+
+### Workflow for Full-Stack Changes
+
+When a feature requires API + frontend changes:
+
+1. **Design API contract** - Define endpoint shape, request/response formats
+2. **Implement backend first**:
+   - Create models, migrations, serializers, views in `coordgeo-backend/`
+   - Run `python manage.py test -v 2` to validate
+   - Commit to `coordgeo-backend` repo
+3. **Implement frontend**:
+   - Update API client in `coordgeo-frontend/src/services/`
+   - Add TypeScript types in `coordgeo-frontend/src/types/`
+   - Create/update components in `coordgeo-frontend/src/components/`
+   - Run `npm run build && npm run lint` to validate
+   - Commit to `coordgeo-frontend` repo
+4. **Test integration**:
+   - Run `scripts/verify_local.sh` from root to validate both repos work together
+   - If issues, fix in respective repo and re-run verification
+5. **No mixed commits** - Keep backend and frontend changes in separate commits to separate repositories
+
+### Communication Between Repos
+
+- Backend exposes REST API at `/api/v1/` with proper CORS headers for frontend ports (5173, 4173, 3000)
+- Frontend consumes via Axios client with JWT + X-Organization-ID headers
+- Changes to API contract require coordination: **always update backend first, then frontend**
+- Use `scripts/verify_local.sh` to confirm integration works before considering a feature complete
+
