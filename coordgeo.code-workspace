@@ -8,7 +8,11 @@
 		"chat.tools.terminal.autoApprove": {
 			"wsl": true,
 			"Add-Type": true,
-			"New-Object": true
+			"New-Object": true,
+			".github/copilot-instructions.md": true,
+			"git -C /home/moises/dev/coordgeo/coordgeo-frontend": true,
+			"git -C /home/moises/dev/coordgeo": true,
+			"git -C \"u:/home/moises/dev/coordgeo/coordgeo-backend\"": true
 		}
 	}
 }
