@@ -51,12 +51,13 @@ coordgeo/
 
 ## 3) Contrato com frontend (não quebrar)
 - API canônica: `/api/v1/`.
-- Compatibilidade legada: `/api/` (mesmas rotas, depreciação futura).
 - JWT:
-  - `POST /api/v1/token/` (e legado `/api/token/`)
-  - `POST /api/v1/token/refresh/` (e legado `/api/token/refresh/`)
+  - `POST /api/v1/token/`
+  - `POST /api/v1/token/refresh/`
 - Bootstrap de organizações sem header:
-  - `GET /api/v1/user/organizations/` (e legado `/api/user/organizations/`)
+  - `GET /api/v1/user/organizations/`
+  - `GET /api/v1/user/profile/`
+  - `GET /api/v1/user/default-organization/`
 - Endpoints org-scoped exigem `Authorization: Bearer <token>` + `X-Organization-ID`.
 - Erros esperados: header ausente 400; sem membership 403.
 - List endpoints mantêm shape paginado DRF: `count/next/previous/results`.
@@ -108,19 +109,19 @@ def test_organization_isolation(self):
     # User from org_a should NOT see org_b's data
     self.client.force_authenticate(user=self.user_a)
     headers = {'HTTP_X_ORGANIZATION_ID': str(self.org_a.id)}
-    response = self.client.get('/api/projects/', **headers)
+    response = self.client.get('/api/v1/projects/', **headers)
     project_ids = [p['id'] for p in response.data['results']]
     self.assertNotIn(str(self.project_b.id), project_ids)
 
 def test_missing_organization_header(self):
     self.client.force_authenticate(user=self.user_a)
-    response = self.client.get('/api/projects/')  # No header
+    response = self.client.get('/api/v1/projects/')  # No header
     self.assertEqual(response.status_code, 400)
 
 def test_unauthorized_organization(self):
     self.client.force_authenticate(user=self.user_a)
     headers = {'HTTP_X_ORGANIZATION_ID': str(self.org_b.id)}  # user_a not member
-    response = self.client.get('/api/projects/', **headers)
+    response = self.client.get('/api/v1/projects/', **headers)
     self.assertEqual(response.status_code, 403)
 ```
 
@@ -130,7 +131,7 @@ def test_unauthorized_organization(self):
 
 **Critical requirements:**
 - PostGIS extension must be enabled
-- All foreign keys to `Organization` must have `db_index=True`
+- All org-bound models must index organization relations (prefer `Meta.indexes`)
 - Use spatial indexes on all geometry fields
 - Test database must use PostGIS template
 
@@ -149,14 +150,18 @@ sudo apt install binutils libproj-dev gdal-bin libgdal-dev libgeos-dev libpq-dev
 **Router-based DRF** (`api/urls.py`): Single `DefaultRouter` registers all ViewSets → auto-generates URL patterns.
 
 **Registered endpoints**:
-- `/api/users/` → UserViewSet
-- `/api/organizations/` → OrganizationViewSet
-- `/api/memberships/` → MembershipViewSet
-- `/api/teams/` → TeamViewSet
-- `/api/projects/` → ProjectViewSet
-- `/api/layers/` → LayerViewSet
-- `/api/datasources/` → DatasourceViewSet
-- `/api/permissions/` → PermissionViewSet
+- `/api/v1/users/` → UserViewSet
+- `/api/v1/organizations/` → OrganizationViewSet
+- `/api/v1/memberships/` → MembershipViewSet
+- `/api/v1/teams/` → TeamViewSet
+- `/api/v1/projects/` → ProjectViewSet
+- `/api/v1/layers/` → LayerViewSet
+- `/api/v1/datasources/` → DatasourceViewSet
+- `/api/v1/permissions/` → PermissionViewSet
+- `/api/v1/auth/register/` → RegisterView
+- `/api/v1/user/profile/` → UserProfileView
+- `/api/v1/user/organizations/` → UserOrganizationsView
+- `/api/v1/user/default-organization/` → UserDefaultOrganizationView
 
 All endpoints support list, create, retrieve, update, destroy actions.
 
@@ -296,12 +301,13 @@ When implementing creation endpoints, consider adding quota validation hooks for
 
 ## 3) Contrato com o backend (não quebrar)
 - API canônica do backend: `/api/v1/`.
-- Compatibilidade legada ainda existe em `/api/`.
 - **Auth JWT**:
   - `POST /api/v1/token/` (preferido)
   - `POST /api/v1/token/refresh/` (preferido)
 - **Bootstrap de organizações** (sem header de org):
   - `GET /api/v1/user/organizations/` (preferido)
+  - `GET /api/v1/user/profile/`
+  - `GET /api/v1/user/default-organization/`
 - **Endpoints org-scoped** exigem:
   - `Authorization: Bearer <access_token>`
   - `X-Organization-ID: <uuid>`
@@ -380,11 +386,15 @@ When implementing creation endpoints, consider adding quota validation hooks for
 3. Axios interceptor adds `Authorization: Bearer <token>` to all requests
 4. User selects organization → stores org ID in Zustand
 5. Axios interceptor adds `X-Organization-ID: <uuid>` to org-scoped requests
+6. Frontend tenta resolver org automaticamente (user organizations → default organization)
 
 **Endpoints that DON'T require X-Organization-ID**:
 - `/api/v1/token/` (login)
 - `/api/v1/token/refresh/` (refresh token)
+- `/api/v1/auth/register/` (signup)
+- `/api/v1/user/profile/` (profile)
 - `/api/v1/user/organizations/` (list user's orgs for selection)
+- `/api/v1/user/default-organization/` (default org)
 
 **Endpoints that REQUIRE X-Organization-ID**:
 - All org-scoped resources: `/api/v1/projects/`, `/api/v1/layers/`, `/api/v1/datasources/`, etc.
@@ -392,6 +402,7 @@ When implementing creation endpoints, consider adding quota validation hooks for
 **Error Handling**:
 - Missing `X-Organization-ID` → Backend returns 400 → Frontend should redirect to org selection
 - Unauthorized org → Backend returns 403 → Frontend should show error + redirect to org selection
+- Network retry: frontend aplica retry apenas para métodos idempotentes (`GET/HEAD/OPTIONS`)
 
 ## MapLibre GL + Drawing Integration
 
@@ -433,7 +444,7 @@ chore: atualiza dependências do frontend
 
 - **Entry Point**: `src/main.tsx` (React root + API interceptor config)
 - **Routing**: `src/App.tsx` (route definitions + guards)
-- **Pages**: `src/pages/LandingPage.tsx`, `LoginPage.tsx`, `SignupPage.tsx`, `OrgSelectPage.tsx`, `MapPage.tsx`
+- **Pages**: `src/pages/LandingPage.tsx`, `LoginPage.tsx`, `SignupPage.tsx`, `OrgSelectPage.tsx`, `MapPage.tsx`, `SettingsPage.tsx`, `UpgradePage.tsx`
 - **State**: `src/state/authStore.ts`, `orgStore.ts`, `mapStore.ts`
 - **Services**: `src/services/api.ts` (axios config), `auth.ts`, `geodata.ts`, `apiErrors.ts`
 - **Map Components**: `src/components/Map/MapContainer.tsx`, `DrawControls.tsx`, `CreateLayerModal.tsx`
